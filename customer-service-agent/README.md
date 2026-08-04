@@ -40,7 +40,7 @@ it.
 
 ## Setup
 
-1. Import `customer-service-agent.json` into your n8n instance
+1. 1. Import [`customer-service-agent.json`](./customer-service-agent.json) into your n8n instance
 2. Add your own credentials:
    - A chat model API key (Groq, Google Gemini, or OpenAI)
    - Google OAuth for Calendar and Sheets
