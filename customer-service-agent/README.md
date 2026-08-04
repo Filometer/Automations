@@ -81,3 +81,13 @@ own before running.
 - n8n (automation platform)
 - LLM chat model (Groq / Google Gemini / OpenAI)
 - Google Calendar and Google Sheets
+
+## Author
+
+**Amoo Samuel Akinkunmi**
+Automation & AI Agent Developer
+- Available for automation and AI agent projects. Reach out by email or LinkedIn.
+
+Contact
+- Email: filometer95@gmail.com
+- LinkedIn: [Amoo Samuel Akinkunmi](https://www.linkedin.com/in/amoo-samuel-akinkunmi2022)
