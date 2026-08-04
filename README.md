@@ -17,4 +17,11 @@ I build automations that take real workload off teams and make
 sure nothing slips through the cracks. Most of these run on free
 or low-cost tools.
 
-Built by Amoo Samuel Akinkunmi · LinkedIn: (www.linkedin.com/in/amoo-samuel-akinkunmi2022)
+
+## Author
+
+**Amoo Samuel Akinkunmi**
+Automation & AI Agent Developer
+
+- Email: filometer95@gmail.com
+- LinkedIn: [Amoo Samuel Akinkunmi](https://www.linkedin.com/in/amoo-samuel-akinkunmi2022)
