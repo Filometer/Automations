@@ -1,5 +1,7 @@
 # Customer Service Agent
 
+![Customer service agent workflow in n8n](./customer-service-agent.png)
+
 An AI-powered customer service chatbot built in n8n. It answers
 business enquiries, books virtual meetings on its own, and
 captures and qualifies every lead, with no code.
