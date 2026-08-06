@@ -25,9 +25,13 @@ vector database.
 Google Drive → download documents → extract clean text →
 split into chunks → generate embeddings → store in Pinecone.
 
+![RAG ingestion workflow in n8n](./rag-ingestion.png)
+
 **2. Retrieval (runs on every question)**
 Chat message → AI Agent → searches Pinecone for relevant chunks →
 answers from them → logs the question if unanswered.
+
+![RAG assistant workflow in n8n](./rag-assistant.png)
 
 | Component | Choice |
 |---|---|
