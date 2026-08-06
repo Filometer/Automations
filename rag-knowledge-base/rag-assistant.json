@@ -1,0 +1,590 @@
+{
+  "name": "Ontime Knowledge Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nMy name is Sam_AI. Welcome to Ontime Logistics, \n\nHow can i help you today",
+        "options": {
+          "title": "Welcome to Ontime Logistics"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -688,
+        -176
+      ],
+      "id": "1eab76b3-09e7-4180-b70e-c38d5c693041",
+      "name": "When chat message received",
+      "webhookId": "e4f90911-1ba2-48f1-a995-a04f16cc36cb"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are the customer service assistant for Ontime Logistics, a\nroad logistics company based in Lagos, Nigeria. You are warm,\nclear, and concise.\n\nCORE FACTS (always true, never invent beyond these)\n- We provide road haulage, warehousing, and last-mile delivery\n  within Nigeria only. We do NOT offer international or air\n  freight.\n- Office hours: Monday to Saturday, 9am to 5pm, West Africa Time.\n- Today's date and time is {{ $now.setZone('Africa/Lagos').toFormat('cccc, dd LLLL yyyy, h:mm a') }}.\n\nYOUR JOBS\nYou have four jobs: answer questions, capture leads, book\nmeetings, and escalate to a human. Follow the rules for each.\n\n1. ANSWERING QUESTIONS\n- For any question about services, pricing, delivery times,\n  coverage, warehousing, or policies, ALWAYS use the\n  search_knowledge tool first and answer only from what it\n  returns.\n- If search_knowledge returns nothing useful, tell the customer\n  you do not have that detail, offer to connect them to the team,\n  and call log_unanswered_question to record it.\n- Never invent facts.\n\n2. CAPTURING LEADS\n- Early in the conversation, politely collect the customer's\n  name, phone number, and email.\n- Once you have them, call save_lead ONCE per conversation.\n- Set Category to \"Serious Lead\" if they ask about pricing, bulk\n  or volume, placing an order, a specific quantity or timeline,\n  or want a meeting. Otherwise \"Unserious Lead\".\n\n3. BOOKING MEETINGS\n- Only book on weekdays (Monday to Friday) within office hours\n  (9am to 5pm). We do not hold meetings on weekends.\n- Collect name, email, and a specific day and time first.\n- Work out the exact date from today's date above. State it back\n  to the customer in words (for example \"Monday, 10 August at\n  2pm\") and make sure the weekday and date match.\n- If they ask for a weekend, offer the nearest weekdays and let\n  them choose.\n- Then call book_meeting, passing startTime as a full ISO 8601\n  timestamp (for example 2026-08-10T14:00:00) and the customer's\n  email. Confirm the date and time and share the Google Meet link.\n\n4. ESCALATING TO A HUMAN\n- If you cannot help, or the customer asks to speak to a person,\n  or they are upset or have a complaint: collect their name and\n  email if you do not have them, then call BOTH escalate_to_human\n  and email_team_escalation with their details and the reason.\n- Tell the customer a team member will follow up.\n\nGENERAL\n- Do only what is needed. Do not book a meeting unless asked. Do\n  not escalate unless needed. Use each tool only when its rule\n  applies."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -336,
+        -208
+      ],
+      "id": "d93c04be-c311-48d1-9c17-4e2747cd18b1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        64
+      ],
+      "id": "38ac5146-8196-406e-b971-22518f6ce9a3",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "eixOzGVlEL2ebjXj",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search Ontime Logistics documents for information about services, pricing, delivery times, coverage, and policies.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "ontime-knowledge",
+          "mode": "list",
+          "cachedResultName": "ontime-knowledge"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        432,
+        -208
+      ],
+      "id": "f38f4acb-caac-4ac2-9e78-0bed664d59dc",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "GnQ7JnebQ13rzoBW",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -16
+      ],
+      "id": "90a3ab33-7d7a-4c1c-a92a-ab90080767be",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "WOg6GKFg0Aixqfu5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -592,
+        64
+      ],
+      "id": "e1d21cff-e19b-4102-9ebd-5c7adc2a035d",
+      "name": "search_knowledge"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Log a customer question that could not be answered from the company documents. Use this whenever you do not have the information to answer.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mq82-sjmOCuX9DzjHkEvzdMmyfXzU-i5P9n9eUMnrdc",
+          "mode": "list",
+          "cachedResultName": "Unanswered Question",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mq82-sjmOCuX9DzjHkEvzdMmyfXzU-i5P9n9eUMnrdc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mq82-sjmOCuX9DzjHkEvzdMmyfXzU-i5P9n9eUMnrdc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.setZone('Africa/Lagos').toFormat('yyyy-LL-dd HH:mm') }}",
+            "Question": "={{ $fromAI('question', 'the exact question the customer asked') }}",
+            "SessionID": "={{ $fromAI('sessionId', 'the conversation session id') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SessionID",
+              "displayName": "SessionID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -432,
+        48
+      ],
+      "id": "90984557-d504-46e3-a187-17e11f1eebb0",
+      "name": "log_unanswered_question",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "RLvmGGMXRPyEpzWx",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Save a customer as a lead with their contact details and enquiry.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "141eWKz0lie6wXaFalF6FZUmvkjXt8jSKGPRliu68jaI",
+          "mode": "list",
+          "cachedResultName": "Ontime Leads Capture",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/141eWKz0lie6wXaFalF6FZUmvkjXt8jSKGPRliu68jaI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/141eWKz0lie6wXaFalF6FZUmvkjXt8jSKGPRliu68jaI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.setZone('Africa/Lagos').toFormat('yyyy-LL-dd HH:mm') }}",
+            "Name": "={{ $fromAI('name', 'customer full name') }}",
+            "Phone": "={{ $fromAI('phone', 'customer phone number') }}",
+            "Email": "={{ $fromAI('email', 'customer email address') }}",
+            "Enquiry": "={{ $fromAI('enquiry', 'one line summary of what they want') }}",
+            "Category": "={{ $fromAI('category', 'either \"Serious Lead\" or \"Unserious Lead\"') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Enquiry",
+              "displayName": "Enquiry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        80,
+        48
+      ],
+      "id": "ed7b6f89-81b1-44b3-83b8-d46358c3c011",
+      "name": "save_lead",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "RLvmGGMXRPyEpzWx",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Book a virtual meeting on a weekday during office hours. Only use when you have the customer's name, email, and a specific date and time.",
+        "calendar": {
+          "__rl": true,
+          "value": "samuel.a.prismcheck@gmail.com",
+          "mode": "list",
+          "cachedResultName": "samuel.a.prismcheck@gmail.com"
+        },
+        "start": "={{ $fromAI('startTime', 'meeting start as ISO 8601, e.g. 2026-08-07T14:00:00') }}",
+        "end": "={{ DateTime.fromISO($fromAI('startTime', 'meeting start as ISO 8601, e.g. 2026-08-07T14:00:00')).plus({minutes: 30}).toISO() }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $fromAI('email', 'customer email address') }}"
+          ],
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "hangoutsMeet"
+            }
+          },
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        48
+      ],
+      "id": "edf3c9d1-3a37-4da9-a7e6-74e9eb030438",
+      "name": "book_meeting",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "fTQhk5WzRTPVlvMu",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Flag a conversation for a human when you cannot help or the customer asks for a person. Records their details for the team to follow up.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11N979kppNap4h-m1T8e1FVOZkOH1rlZ-Jq3q-WGcLa8",
+          "mode": "list",
+          "cachedResultName": "Escalation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11N979kppNap4h-m1T8e1FVOZkOH1rlZ-Jq3q-WGcLa8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11N979kppNap4h-m1T8e1FVOZkOH1rlZ-Jq3q-WGcLa8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.setZone('Africa/Lagos').toFormat('yyyy-LL-dd HH:mm') }}",
+            "Name": "={{ $fromAI('name', 'customer name if known, else Unknown') }}",
+            "Email": "={{ $fromAI('email', 'customer email if known, else empty') }}",
+            "Reasion": "={{ $fromAI('reason', 'why this needs a human') }}",
+            "SessionID": "={{ $fromAI('sessionId', 'the conversation session id') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reasion",
+              "displayName": "Reasion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SessionID",
+              "displayName": "SessionID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        48
+      ],
+      "id": "fb0e488b-8b77-4bda-a5b8-17ff42e30e1d",
+      "name": "escalation_log",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "RLvmGGMXRPyEpzWx",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Send an email to the team alerting them that a customer needs human help.",
+        "sendTo": "filometer95@gmail.com",
+        "subject": "={{ \"Escalation: customer needs help\" }}",
+        "emailType": "text",
+        "message": "=  {{ \"A customer needs human follow-up.\\n\\nName: \" + $fromAI('name','customer name') + \"\\nEmail: \" + $fromAI('email','customer email') + \"\\nReason: \" + $fromAI('reason','why') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "1f275f33-6711-48c3-805e-13e45d5f66b4",
+      "name": "email_team_escalation",
+      "webhookId": "fbc1b203-b477-41ee-ac64-e369e3473d76",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "zocK1rOIpGSADlMd",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_unanswered_question": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "book_meeting": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalation_log": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_team_escalation": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "805b2a68-e1cf-4afa-bd1b-a0c7fe3601d1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6a00489a06caac19503004edbcc186d91a4d534d45f7988c1e6a519c1a6ad8d6"
+  },
+  "nodeGroups": [],
+  "id": "Fre05XMkTRV8yB4D",
+  "tags": []
+}
