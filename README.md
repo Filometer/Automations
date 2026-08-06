@@ -10,6 +10,7 @@ cases, and reliable handling of dates, data, and failures.
 | Project | What it does | Key skills |
 |---|---|---|
 | [Customer Service Agent](./customer-service-agent) | AI chatbot that answers enquiries, books meetings, and captures qualified leads | AI agents, tool use, Google Calendar & Sheets, prompt design |
+| [RAG Knowledge Base](./rag-knowledge-base) | AI assistant that answers from company documents using retrieval-augmented generation, and logs what it can't answer | RAG, embeddings, vector databases (Pinecone), document ingestion |
 
 ## About
 
