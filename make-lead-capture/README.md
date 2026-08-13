@@ -6,7 +6,7 @@ unique ID, scores and routes the lead by budget, writes it to a
 CRM sheet, and emails the right salesperson, all with no manual
 handling.
 
-![Make.com lead capture scenario](./scenario.png)
+![Make.com lead capture scenario](./scenerio.png)
 
 ## What it does
 
