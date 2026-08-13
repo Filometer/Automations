@@ -1,0 +1,181 @@
+{
+    "name": "Integration Google Sheets",
+    "flow": [
+        {
+            "id": 2,
+            "module": "google-sheets:watchRows",
+            "version": 2,
+            "parameters": {
+                "from": "drive",
+                "mode": "select",
+                "limit": 2,
+                "sheetId": "Leads",
+                "__IMTCONN__": 8762422,
+                "spreadsheetId": "/YOUR_SPREADSHEET_ID",
+                "tableFirstRow": "A1:Z1",
+                "includesHeaders": true,
+                "valueRenderOption": "FORMATTED_VALUE",
+                "dateTimeRenderOption": "FORMATTED_STRING"
+            },
+            "restore_connection_label": "Automation Trigger (your-account@example.com)",
+            "interface_note": "Leads intake sheet: Timestamp(A), Full Name(B), Email(C), Phone(D), Company(E), Industry(F), Service(G), Estimated Budget(H), Project Description(I)"
+        },
+        {
+            "id": 4,
+            "module": "google-sheets:filterRows",
+            "version": 2,
+            "mapper": {
+                "from": "drive",
+                "limit": "1",
+                "filter": [
+                    [
+                        {
+                            "a": "D",
+                            "b": "{{2.`2`}}",
+                            "o": "text:equal"
+                        }
+                    ]
+                ],
+                "sheetId": "Lead CRM",
+                "spreadsheetId": "YOUR_SPREADSHEET_ID",
+                "tableFirstRow": "A1:CZ1",
+                "includesHeaders": true
+            },
+            "note": "Duplicate guard: search Lead CRM for a matching email before proceeding"
+        },
+        {
+            "id": 17,
+            "module": "util:FunctionIncrement",
+            "version": 1,
+            "parameters": {
+                "reset": "scenario"
+            },
+            "filter": {
+                "name": "New leads only",
+                "conditions": [
+                    [
+                        {
+                            "a": "{{4.`__ROW_NUMBER__`}}",
+                            "o": "notexist"
+                        }
+                    ]
+                ]
+            },
+            "note": "Only increments (creates an ID) when no duplicate row was found"
+        },
+        {
+            "id": 18,
+            "module": "util:SetVariables",
+            "version": 1,
+            "mapper": {
+                "scope": "roundtrip",
+                "variables": [
+                    {
+                        "name": "leadScore",
+                        "value": "{{switch(2.`7`; \"Less than $1,000\"; 5; \"$1,000-$5,000\"; 10; \"$5,000-$10,000\"; 20; \"$10,000-$20,000\"; 30; \"Over $20,000\"; 40; 0) + switch(2.`6`; \"AI Solutions\"; 20; \"Business Automation\"; 20; \"Mobile App\"; 15; \"Website Development\"; 10; 0) + switch(2.`5`; \"Finance\"; 15; \"Healthcare\"; 15; \"Education\"; 10; \"Retail\"; 10; 5)}}"
+                    },
+                    {
+                        "name": "leadId",
+                        "value": "LD-{{17.i}}"
+                    }
+                ]
+            },
+            "note": "First variables module: compute leadScore (budget + service + industry) and leadId"
+        },
+        {
+            "id": 19,
+            "module": "util:SetVariables",
+            "version": 1,
+            "mapper": {
+                "scope": "roundtrip",
+                "variables": [
+                    {
+                        "name": "leadStatus",
+                        "value": "{{switch(2.`7`; \"Over $20,000\"; \"Hot\"; \"$10,000-$20,000\"; \"Hot\"; \"$5,000-$10,000\"; \"Warm\"; \"$1,000-$5,000\"; \"Warm\"; \"Less than $1,000\"; \"Cold\"; \"Cold\")}}"
+                    },
+                    {
+                        "name": "assignTo",
+                        "value": "{{switch(2.`7`; \"Over $20,000\"; \"Senior Consultant\"; \"$10,000-$20,000\"; \"Senior Consultant\"; \"Sales Rep\")}}"
+                    },
+                    {
+                        "name": "assignedEmail",
+                        "value": "{{switch(2.`7`; \"Over $20,000\"; \"senior-leads@example.com\"; \"$10,000-$20,000\"; \"senior-leads@example.com\"; \"general-leads@example.com\")}}"
+                    }
+                ]
+            },
+            "note": "Second variables module: route by budget -> status, owner, and email (split from module 18 because variables cannot self-reference)"
+        },
+        {
+            "id": 20,
+            "module": "google-sheets:addRow",
+            "version": 2,
+            "mapper": {
+                "from": "drive",
+                "mode": "select",
+                "values": {
+                    "Date": "{{2.`0`}}",
+                    "Email": "{{2.`2`}}",
+                    "Notes": "New",
+                    "Phone": "{{2.`3`}}",
+                    "Budget": "{{2.`7`}}",
+                    "Status": "{{19.leadStatus}}",
+                    "Company": "{{2.`4`}}",
+                    "Lead ID": "{{18.leadId}}",
+                    "Service": "{{2.`6`}}",
+                    "Industry": "{{2.`5`}}",
+                    "Full Name": "{{2.`1`}}",
+                    "Lead Score": "{{18.leadScore}}",
+                    "Assigned To": "{{19.assignTo}}",
+                    "Description": "{{2.`8`}}"
+                },
+                "sheetId": "Lead CRM",
+                "spreadsheetId": "/YOUR_SPREADSHEET_ID",
+                "includesHeaders": true,
+                "insertDataOption": "INSERT_ROWS",
+                "useColumnHeaders": true,
+                "valueInputOption": "USER_ENTERED"
+            },
+            "note": "Write the finished record to the Lead CRM sheet"
+        },
+        {
+            "id": 23,
+            "module": "google-email:sendAnEmail",
+            "version": 4,
+            "mapper": {
+                "to": [
+                    "{{19.assignedEmail}}"
+                ],
+                "subject": "New {{19.leadStatus}} Lead: {{2.`1`}}",
+                "bodyType": "collection",
+                "contents": [
+                    {
+                        "text": "Dear {{19.assignTo}}, \n\nLeadID {{18.leadId}}\nScore: {{18.leadScore}}\n\nCustomer Details: \nFull Name: {{2.`1`}}\nEmail: {{2.`2`}}\nPhone No: {{2.`3`}}\nCompany Name: {{2.`4`}}\nIndustry: {{2.`5`}}\nBudget: {{2.`7`}}\n\nDescription: {{2.`8`}}\n\nBest Regards, \nYour Name \nCustomer Service Rep\nFilo Tech"
+                    }
+                ]
+            },
+            "restore_connection_label": "Send Gmail (your-account@example.com)",
+            "note": "Notify the assigned salesperson with the lead summary"
+        }
+    ],
+    "metadata": {
+        "instant": false,
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": true,
+            "autoCommitTriggerLast": true,
+            "sequential": false,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false,
+            "freshVariables": false
+        },
+        "zone": "eu1.make.com",
+        "notes": [
+            "This is a simplified, documentation-friendly copy of the exported blueprint.",
+            "Connection IDs and the full Make field metadata have been trimmed for readability.",
+            "Replace YOUR_SPREADSHEET_ID and the placeholder emails with your own before importing."
+        ]
+    }
+}
