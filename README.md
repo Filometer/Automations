@@ -1,7 +1,7 @@
 # Automations
 
 A collection of real-world business automation and AI agent
-projects, built with n8n. Each project solves an actual business
+projects, built with n8n, make and zapier. Each project solves an actual business
 problem, with a focus on the hard parts: decision logic, edge
 cases, and reliable handling of dates, data, and failures.
 
