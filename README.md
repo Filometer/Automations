@@ -10,6 +10,7 @@ cases, and reliable handling of dates, data, and failures.
 | [Customer Service Agent](./customer-service-agent) | AI chatbot that answers enquiries, books meetings, and captures qualified leads | AI agents, tool use, Google Calendar & Sheets, prompt design |
 | [RAG Knowledge Base](./rag-knowledge-base) | AI assistant that answers from company documents using retrieval-augmented generation, and logs what it can't answer | RAG, embeddings, vector databases (Pinecone), document ingestion |
 | [Lead Capture & CRM Routing](./make-lead-capture) | Auto-captures leads, removes duplicates, scores and routes them by budget, logs to a CRM, and emails the right rep | Make.com, Google Sheets, Gmail, routing & scoring logic |
+| [Zapier Automations](./zapier-automations) | An inquiry-capture workflow and an AI content pipeline that generates and posts to LinkedIn | Zapier, Google Forms & Sheets, Gmail, OpenAI, LinkedIn, filters |
 
 ## About
 I build automations that take real workload off teams and make
