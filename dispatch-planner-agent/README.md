@@ -1,6 +1,8 @@
-Dispatch Planner Agent
+## Dispatch Planner Agent
 An AI agent that automates daily dispatch planning for a logistics/delivery operation — from reading open orders to notifying each driver of their route, with a human approval step in between.
-What it does
+![Workflow diagram](./workflow-diagram.png)
+
+## What it does
 Every morning, this workflow:
 Reads live data — pulls open orders and available fleet/driver data from Google Sheets
 Reasons over constraints — an AI model (Google Gemini) builds a route plan that respects vehicle capacity, delivery zones, and delivery time windows, and explicitly flags any order it can't reasonably fit rather than forcing a bad assignment
@@ -28,7 +30,7 @@ Schedule Trigger
       │            → Group stops by driver → Send WhatsApp (per driver)
       └─ Reject  → Build revision prompt (with dispatcher feedback) → loops back to Gemini
 ```
-Key skills demonstrated
+## Key skills demonstrated
 AI agent design with tool use and structured JSON output
 Human-in-the-loop approval pattern (pause/resume via n8n's Wait node + form)
 WhatsApp Business Cloud API integration (message templates, business-initiated messaging)
@@ -42,5 +44,7 @@ This workflow uses placeholder values that need to be replaced with your own bef
 A configured Google Sheets credential in n8n
 A configured Google Gemini credential in n8n
 A configured WhatsApp Business API credential in n8n, plus an approved message template for the driver notification
-Sample data
+
+## Sample data
+Data:   [sample-data.xlsx](./sample-data.xlsx)
 `sample-data.xlsx` included in this folder shows the expected sheet structure with demo orders and fleet data, so you can test the workflow end to end before connecting your own operational data.
