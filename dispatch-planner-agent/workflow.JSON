@@ -1,1 +1,822 @@
-
+{
+  "name": "Daily Dispatch Planner",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "24ad963c-8a15-40c1-a19e-0d1a4d645b93",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2592,
+        -1536
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FiloTech Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1489873845,
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1489873845"
+        },
+        "options": {}
+      },
+      "id": "37a55dc5-8408-4045-92f7-00d1ad04d43b",
+      "name": "Read Orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2384,
+        -1264
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dZ5JFD2ClmXtUh0x",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FiloTech Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 330605918,
+          "mode": "list",
+          "cachedResultName": "Fleet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=330605918"
+        },
+        "options": {}
+      },
+      "id": "2fe7b906-bb77-40a1-b4e5-0d12a82f721f",
+      "name": "Read Fleet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2208,
+        -1264
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dZ5JFD2ClmXtUh0x",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const orders = $('Read Orders').all().map(i => i.json);\nconst fleet = $('Read Fleet').all().map(i => i.json);\n\nreturn [{\n  json: { orders, fleet }\n}];"
+      },
+      "id": "e28500a9-0e5d-4c16-9baa-fdd9d8170f79",
+      "name": "Combined Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2208,
+        -1552
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst orders = data.orders;\nconst fleet = data.fleet;\n\nconst systemInstructions = `You are a logistics dispatch planner for a courier company in Lagos, Nigeria.\n\nRULES:\n- Each vehicle's total assigned weight_kg must not exceed its capacity_kg.\n- Prefer assigning orders to the driver/vehicle whose current_zone matches the order's destination_area.\n- Respect each order's time_window_start and time_window_end — a driver should not be scheduled to arrive outside that window given their shift_start/shift_end.\n- Priority orders should be scheduled earlier in a driver's route than Standard orders when possible.\n- If an order cannot reasonably fit any vehicle (capacity, zone, or time conflict), do NOT force it — put it in \"unassigned\" instead.\n- Sequence stops within each route in a sensible order (group by proximity/zone, respect time windows).\n\nOUTPUT FORMAT:\nReturn ONLY valid JSON, no markdown fences, no explanation text, matching exactly this shape:\n{\n  \"routes\": [\n    {\n      \"driver_id\": \"string\",\n      \"vehicle_id\": \"string\",\n      \"stops\": [\n        { \"order_id\": \"string\", \"sequence\": 1, \"estimated_arrival\": \"HH:MM\" }\n      ]\n    }\n  ],\n  \"unassigned\": [\n    { \"order_id\": \"string\", \"reason\": \"string\" }\n  ],\n  \"notes\": \"string - any general observations about today's plan\"\n}`;\n\nconst promptText = `${systemInstructions}\n\nTODAY'S ORDERS:\n${JSON.stringify(orders, null, 2)}\n\nTODAY'S FLEET:\n${JSON.stringify(fleet, null, 2)}`;\n\nreturn [{ json: { promptText } }];"
+      },
+      "id": "bc2d45d1-c5b8-4668-9d19-639a6d76737e",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        -1248
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.promptText }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxOutputTokens": 16000,
+          "temperature": 0.2,
+          "thinkingBudget": 2048
+        }
+      },
+      "id": "452246db-6d5a-420d-a971-973082223316",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -1968,
+        -1648
+      ],
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2HXozLQbghkGcGin",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst parts = j?.content?.parts;\nconst partsText = Array.isArray(parts)\n  ? parts.map(p => (typeof p?.text === 'string' ? p.text : '')).join('')\n  : null;\nconst raw = (partsText && partsText.length ? partsText : null) ?? (typeof j.content === 'string' ? j.content : null) ?? j.text ?? j.output;\n\nif (typeof raw !== 'string') {\n  return [{\n    json: {\n      parse_error: true,\n      error_message: 'Model response text was not found or not a string',\n      raw_response: j\n    }\n  }];\n}\n\nlet cleaned = raw.trim();\n// Strip markdown code fences if Gemini added them anyway\ncleaned = cleaned.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '');\n\nlet plan;\ntry {\n  plan = JSON.parse(cleaned);\n} catch (err) {\n  return [{\n    json: {\n      parse_error: true,\n      error_message: err.message,\n      raw_response: raw\n    }\n  }];\n}\n\nreturn [{ json: { parse_error: false, ...plan } }];"
+      },
+      "id": "b7fa45da-5c3e-4dbf-9e5f-a5d0868fbbdc",
+      "name": "Parse Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1680,
+        -1456
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $input.first().json;\nconst combined = $items('Combined Data')[0].json;\nconst orders = combined.orders;\n\n// Build a quick lookup: order_id -> address\nconst addressLookup = {};\nfor (const o of orders) {\n  addressLookup[o.order_id] = o.address;\n}\n\nconst today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD\nconst rows = [];\n\nfor (const route of plan.routes) {\n  for (const stop of route.stops) {\n    rows.push({\n      json: {\n        run_date: today,\n        driver_id: route.driver_id,\n        vehicle_id: route.vehicle_id,\n        sequence: stop.sequence,\n        order_id: stop.order_id,\n        stop_address: addressLookup[stop.order_id] || 'ADDRESS NOT FOUND',\n        estimated_arrival: stop.estimated_arrival,\n        status: 'Proposed'\n      }\n    });\n  }\n}\n\nfor (const u of plan.unassigned || []) {\n  rows.push({\n    json: {\n      run_date: today,\n      driver_id: 'UNASSIGNED',\n      vehicle_id: '-',\n      sequence: '-',\n      order_id: u.order_id,\n      stop_address: addressLookup[u.order_id] || 'ADDRESS NOT FOUND',\n      estimated_arrival: '-',\n      status: `Needs review: ${u.reason}`\n    }\n  });\n}\n\nreturn rows;"
+      },
+      "id": "5de92151-6008-4f09-8c12-77de500bb475",
+      "name": "Flatten Routes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1424,
+        -1376
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FiloTech Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 303834176,
+          "mode": "list",
+          "cachedResultName": "Proposed Plan",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=303834176"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_date": "={{ $json.run_date }}",
+            "driver_id": "={{ $json.driver_id }}",
+            "vehicle_id": "={{ $json.vehicle_id }}",
+            "sequence": "={{ $json.sequence }}",
+            "order_id": "={{ $json.order_id }}",
+            "status": "Proposed",
+            "estimated_arrival": "={{ $json.estimated_arrival }}",
+            "stop_address": "={{ $json.stop_address }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "run_date",
+              "displayName": "run_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "driver_id",
+              "displayName": "driver_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vehicle_id",
+              "displayName": "vehicle_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sequence",
+              "displayName": "sequence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stop_address",
+              "displayName": "stop_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estimated_arrival",
+              "displayName": "estimated_arrival",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2aa1224b-3a57-465b-8c4f-e0f6051fce2f",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1104,
+        -1296
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dZ5JFD2ClmXtUh0x",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: the flattened rows from \"Flatten routes\" (one item per stop)\nconst rows = $items('Flatten Routes').map(i => i.json);\n\n// Group stops by driver\nconst byDriver = {};\nfor (const r of rows) {\n  if (r.driver_id === 'UNASSIGNED') continue;\n  if (!byDriver[r.driver_id]) byDriver[r.driver_id] = [];\n  byDriver[r.driver_id].push(r);\n}\n\nlet summary = `DISPATCH PLAN — ${rows[0]?.run_date || ''}\\n\\n`;\n\nfor (const [driverId, stops] of Object.entries(byDriver)) {\n  summary += `${driverId} — ${stops.length} stop${stops.length > 1 ? 's' : ''}\\n`;\n  for (const s of stops) {\n    summary += `  ${s.sequence}. ${s.order_id} → ${s.stop_address} (ETA ${s.estimated_arrival})\\n`;\n  }\n  summary += '\\n';\n}\n\nconst unassigned = rows.filter(r => r.driver_id === 'UNASSIGNED');\nif (unassigned.length > 0) {\n  summary += `NEEDS REVIEW (${unassigned.length}):\\n`;\n  for (const u of unassigned) {\n    summary += `  ${u.order_id} — ${u.status}\\n`;\n  }\n}\n\nreturn [{ json: { summaryText: summary } }];"
+      },
+      "id": "25c3a6f8-17ec-43c8-8755-0e1e7376abec",
+      "name": "Build Approval Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        -1360
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "dispatcher@example.com",
+        "subject": "Today's dispatch plan — needs your approval",
+        "emailType": "text",
+        "message": "=Please review and approve today's dispatch plan: {{ $execution.resumeFormUrl }} ",
+        "options": {}
+      },
+      "id": "c0d888d8-09f8-4495-8ed8-10bcf8a6ca85",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -624,
+        -1264
+      ],
+      "webhookId": "ccedf010-692a-449f-8cc4-a5fb7260e1e8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ECifI2qbjlfzj5PJ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Daily Dispatch Schedule",
+        "formDescription": "={{ $('Build Approval Summary').item.json.summaryText }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Reject"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Comments"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "58644bfd-f742-441e-b957-da47dff83160",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1456,
+        -1632
+      ],
+      "webhookId": "5ffc7d70-df0c-4ac3-bde4-a71d1b336eee"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b5df3464-5667-462f-b11f-e16baca62765",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7907e9c7-6c83-42e7-9472-7e729e9487e3",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1184,
+        -1632
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const flatRows = $items('Flatten Routes').map(i => i.json);\nconst fleet = $items('Combined Data')[0].json.fleet;\n\n// Lookup: driver_id -> driver_name\nconst nameLookup = {};\nfor (const f of fleet) {\n  nameLookup[f.driver_id] = f.driver_name;\n}\n\nconst now = new Date().toTimeString().slice(0, 5); // HH:MM\n\nconst rows = flatRows\n  .filter(r => r.driver_id !== 'UNASSIGNED') // only real assignments go live\n  .map(r => ({\n    json: {\n      run_date: r.run_date,\n      driver_id: r.driver_id,\n      driver_name: nameLookup[r.driver_id] || 'UNKNOWN',\n      vehicle_id: r.vehicle_id,\n      sequence: r.sequence,\n      order_id: r.order_id,\n      stop_address: r.stop_address,\n      estimated_arrival: r.estimated_arrival,\n      whatsapp_sent_at: now\n    }\n  }));\n\nreturn rows;"
+      },
+      "id": "005ea1d7-4f02-47f3-b260-0afe717fbda7",
+      "name": "Prepare Live Routes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        -1648
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FiloTech Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1477516601,
+          "mode": "list",
+          "cachedResultName": "Live Routes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1477516601"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_date": "={{ $json.run_date }}",
+            "driver_id": "={{ $json.driver_id }}",
+            "driver_name": "={{ $json.driver_name }}",
+            "vehicle_id": "={{ $json.vehicle_id }}",
+            "sequence": "={{ $json.sequence }}",
+            "order_id": "={{ $json.order_id }}",
+            "stop_address": "={{ $json.stop_address }}",
+            "estimated_arrival": "={{ $json.estimated_arrival }}",
+            "whatsapp_sent_at": "={{ $json.whatsapp_sent_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "run_date",
+              "displayName": "run_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "driver_id",
+              "displayName": "driver_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "driver_name",
+              "displayName": "driver_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vehicle_id",
+              "displayName": "vehicle_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sequence",
+              "displayName": "sequence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stop_address",
+              "displayName": "stop_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estimated_arrival",
+              "displayName": "estimated_arrival",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp_sent_at",
+              "displayName": "whatsapp_sent_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d85b6d54-feed-448f-a414-62bc83996c96",
+      "name": "Write Live Routes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -640,
+        -1648
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dZ5JFD2ClmXtUh0x",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\n// Group flat stop rows back into one item per driver\nconst byDriver = {};\nfor (const r of rows) {\n  if (!byDriver[r.driver_id]) {\n    byDriver[r.driver_id] = {\n      driver_id: r.driver_id,\n      driver_name: r.driver_name,\n      stops: []\n    };\n  }\n  byDriver[r.driver_id].stops.push({\n    order_id: r.order_id,\n    stop_address: r.stop_address,\n    estimated_arrival: r.estimated_arrival,\n    sequence: r.sequence\n  });\n}\n\n// Get phone numbers from Fleet data\nconst fleet = $items('Combined Data')[0].json.fleet;\nconst phoneLookup = {};\nfor (const f of fleet) {\n  phoneLookup[f.driver_id] = f.driver_phone;\n}\n\nreturn Object.values(byDriver).map(d => ({\n  json: {\n    driver_id: d.driver_id,\n    driver_name: d.driver_name,\n    driver_phone: phoneLookup[d.driver_id],\n    stop_count: d.stops.length,\n    first_stop_time: d.stops[0]?.estimated_arrival || '',\n    stops_summary: d.stops.map(s => `${s.sequence}. ${s.stop_address} (${s.estimated_arrival})`).join(' | ')\n  }\n}));"
+      },
+      "id": "f917b703-462f-4df7-8ea8-12bc3b58dc6f",
+      "name": "Group by driver",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        -1824
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/YOUR_PHONE_NUMBER_ID/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.driver_phone.replace(/[^0-9]/g, '') }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"daily_route_assignment\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{ $json.driver_name }}\" },\n          { \"type\": \"text\", \"text\": \"{{ $json.stop_count.toString() }}\" },\n          { \"type\": \"text\", \"text\": \"{{ $json.stops_summary }}\" }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "2a9ff6a2-2a9b-418a-a2b1-9124bef4f855",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -480,
+        -1824
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "QE7PK4MqXLLHpJMC",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const waitOutput = $input.first().json;\nconst comments = waitOutput.Comments || 'No specific comments provided.';\n\n// Track how many times we've retried — stored on the item itself as it loops\nconst previousAttempt = waitOutput.attempt_number || 0;\nconst attemptNumber = previousAttempt + 1;\n\nconst MAX_ATTEMPTS = 3;\n\nif (attemptNumber > MAX_ATTEMPTS) {\n  return [{\n    json: {\n      give_up: true,\n      attempt_number: attemptNumber,\n      final_comments: comments\n    }\n  }];\n}\n\n// Reach back to the original prompt text\nconst originalPrompt = $items('Build Prompt')[0].json.promptText;\n\nconst revisedPrompt = `${originalPrompt}\n\n---\nREVISION REQUEST (attempt ${attemptNumber} of ${MAX_ATTEMPTS}):\nThe dispatcher reviewed your previous plan and rejected it with this feedback:\n\"${comments}\"\n\nPlease revise the plan to address this feedback directly. Keep all the same rules and output format as before.`;\n\nreturn [{\n  json: {\n    promptText: revisedPrompt,\n    attempt_number: attemptNumber\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        -1856
+      ],
+      "id": "2a3fe3a4-60ff-4fcf-802f-bfa8b8e50bc2",
+      "name": "Build revision prompt"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Orders": {
+      "main": [
+        [
+          {
+            "node": "Read Fleet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Fleet": {
+      "main": [
+        [
+          {
+            "node": "Combined Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combined Data": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Plan": {
+      "main": [
+        [
+          {
+            "node": "Flatten Routes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Routes": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Build Approval Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Approval Summary": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Prepare Live Routes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build revision prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Live Routes": {
+      "main": [
+        [
+          {
+            "node": "Write Live Routes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Live Routes": {
+      "main": [
+        [
+          {
+            "node": "Group by driver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Group by driver": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build revision prompt": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a56eb156-8205-4694-8048-bbfb12f976a5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "02bcc11e8e7dd60f4de4755b4aa96b53287df35f6261a34db61e90bcd3c46905"
+  },
+  "nodeGroups": [],
+  "id": "Mx0ri4YrCMTrRF8H",
+  "tags": []
+}
